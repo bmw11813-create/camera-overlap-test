@@ -164,7 +164,7 @@
 
   var W = 480, H0 = 0, cv = null, stream = null, running = false;
   var refDes = null, refKp = null, orb = null, matcher = null;
-  var times = [], lastState = 'blink', shots = 0, curPct = 0, ready2shoot = false;
+  var times = [], lastState = 'blink', shots = 0, curPct = null, ready2shoot = false;
   var cap = document.createElement('canvas');
   var cx = cap.getContext('2d', { willReadFrequently: true });
 
@@ -201,7 +201,7 @@
   function ready(mod, where) {
     cv = mod || window.cv;
     try {
-      orb = new cv.ORB(2000);
+      orb = new cv.ORB(1400);
       matcher = new cv.BFMatcher(cv.NORM_HAMMING, false);
       mEng.textContent = 'ORB 준비됨 · ' + where;
     } catch (e) {
@@ -332,7 +332,8 @@
     var d = document.createElement('div');
     var a = document.createElement('span'); a.textContent = n + '장째';
     var b = document.createElement('span'); b.className = 'num';
-    b.textContent = pct === null ? '첫 장' : Math.round(pct) + '% 남음';
+    b.textContent = pct === null ? (n === 1 ? '첫 장' : '재기 전') :
+      (pct >= 10 ? Math.round(pct) : Math.round(pct * 10) / 10) + '% 남음';
     d.appendChild(a); d.appendChild(b);
     shotsBox.insertBefore(d, shotsBox.firstChild);
     while (shotsBox.children.length > 8) shotsBox.removeChild(shotsBox.lastChild);
@@ -352,7 +353,7 @@
 
     shots += 1; nshots.textContent = shots;
     logShot(shots, was);
-    lastState = 'ok'; ready2shoot = true; curPct = 100;
+    lastState = 'ok'; ready2shoot = true; curPct = null; lostAt = 0;
     if (!running) { running = true; times = []; requestAnimationFrame(loop); }
   });
 
@@ -369,7 +370,7 @@
       var t0 = performance.now();
       var r = measure();
       var dt = performance.now() - t0;
-      curPct = r.pct;
+      if (r.ok) curPct = r.pct;
 
       times.push(dt); if (times.length > 20) times.shift();
       var avg = times.reduce(function (s, x) { return s + x; }, 0) / times.length;
