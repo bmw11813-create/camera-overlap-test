@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>촬영 겹침 시험기 (테스트)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+  :root{
+    --ground:#121311; --panel:#1D1F1C; --panel-2:#272A26; --line:#393D37;
+    --ink:#F2F3F0; --ink-2:#A8ADA3; --ink-3:#767C71;
+    --go:#4FB98B; --stop:#E8621A; --stop-soft:#3A2418;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--ground);color:var(--ink);
+    font-family:"Noto Sans KR",system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+  img{max-width:100%}
+  .num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+  .testbar{
+    background:repeating-linear-gradient(135deg,#E8621A 0 14px,#C95314 14px 28px);
+    color:#fff;font-weight:700;font-size:13px;letter-spacing:.02em;
+    padding:10px 16px;text-align:center;
+  }
+  .wrap{padding-inline:16px;padding-block:18px 40px;max-width:560px;margin:0 auto;
+    display:flex;flex-direction:column;gap:16px}
+  h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+  .sub{margin:0;font-size:13px;line-height:1.6;color:var(--ink-2)}
+
+  .stage{position:relative;border-radius:12px;overflow:hidden;background:#000;
+    aspect-ratio:3/4;max-width:100%;border:1px solid var(--line)}
+  .stage video{width:100%;height:100%;object-fit:cover;display:block}
+  .stage .empty{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;color:var(--ink-3);font-size:13px;padding:16px;text-align:center}
+  .edge{position:absolute;inset:0;border:8px solid transparent;pointer-events:none}
+  .edge.blink{border-color:var(--stop);animation:bl .9s ease-in-out infinite}
+  .edge.ok{border-color:var(--go)}
+  @keyframes bl{0%,100%{opacity:1}50%{opacity:.12}}
+  @media (prefers-reduced-motion:reduce){.edge.blink{animation:none}}
+
+  .verdict{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(18,19,17,.85);
+    border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:12px}
+  .verdict .big{font-size:15px;font-weight:700}
+  .verdict .score{margin-left:auto;font-size:22px;font-weight:600}
+  .thumb{width:60px;height:60px;border-radius:8px;object-fit:cover;
+    border:1px solid var(--line);background:var(--panel-2);flex-shrink:0}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  button{font:inherit;font-size:14px;font-weight:500;padding:12px 18px;min-height:46px;
+    border-radius:8px;cursor:pointer;background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
+  button.primary{background:var(--go);border-color:var(--go);color:#0B2019;font-weight:700}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button:focus-visible{outline:2px solid var(--go);outline-offset:2px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .card h2{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--ink-2)}
+  dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:baseline}
+  dt{font-size:13px;color:var(--ink-2)}
+  dd{margin:0;font-size:14px;text-align:right;word-break:break-all}
+  .note{font-size:12px;line-height:1.6;color:var(--ink-3)}
+  .bad{color:var(--stop)}
+  .band{background:var(--stop-soft);border:1px solid #5A3820;border-radius:10px;
+    padding:11px 13px;font-size:13px;line-height:1.55;color:#F3C9AC}
+</style>
+</head>
+<body>
+
+<div class="testbar">테스트 페이지 · 내부 성능 측정용 · 실제 서비스 아님</div>
+
+<div class="wrap">
+
+  <div>
+    <h1>촬영 겹침 시험기</h1>
+    <p class="sub">이 폰에서 카메라가 열리는지, 그리고 <strong>겹침 판정이 1초에 몇 번</strong> 도는지 재는 도구입니다. 사진은 <strong>저장되지도 전송되지도 않습니다</strong> — 이 화면 안에서 계산하고 버립니다.</p>
+  </div>
+
+  <div class="stage" id="stage">
+    <video id="v" playsinline muted></video>
+    <div class="empty" id="empty">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#767C71" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><circle cx="12" cy="13" r="3.6"></circle></svg>
+      <span>아래 “카메라 켜기”를 누르세요</span>
+    </div>
+    <div class="edge" id="edge"></div>
+    <div class="verdict" id="verdict" hidden>
+      <img class="thumb" id="ref" alt="기준으로 잡은 장면">
+      <span class="big" id="vtext">기준 장면을 잡으세요</span>
+      <span class="score num" id="vscore">—</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <button class="primary" id="btnCam">카메라 켜기</button>
+    <button id="btnRef" disabled>기준 장면 잡기</button>
+    <button id="btnStop" disabled>멈춤</button>
+  </div>
+
+  <div class="card">
+    <h2>측정</h2>
+    <dl>
+      <dt>판정 속도</dt><dd class="num" id="mFps">—</dd>
+      <dt>한 번 판정</dt><dd class="num" id="mMs">—</dd>
+      <dt>비교 해상도</dt><dd class="num">480 px</dd>
+      <dt>카메라 해상도</dt><dd class="num" id="mCam">—</dd>
+      <dt>판정 엔진</dt><dd id="mEng">불러오는 중…</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>기준값</h2>
+    <dl>
+      <dt>깜빡임</dt><dd class="num">27 이하</dd>
+      <dt>촬영 가능</dt><dd class="num">40 이상</dd>
+      <dt>사이 구간</dt><dd class="num">28 – 39 유지</dd>
+    </dl>
+    <p class="note" style="margin:10px 0 0">사진 32장, 전 496쌍을 비교해 얻은 값입니다. 상관없는 사진끼리도 27까지 나왔습니다.</p>
+  </div>
+
+  <div class="band" id="err" hidden></div>
+
+  <p class="note">권한 창이 안 뜨면 주소창 자물쇠에서 카메라를 허용해 주세요. 아이폰은 Safari, 안드로이드는 Chrome 에서 가장 잘 됩니다.</p>
+</div>
+
+<script>
+(function () {
+  var v = document.getElementById('v'), edge = document.getElementById('edge');
+  var empty = document.getElementById('empty'), verdict = document.getElementById('verdict');
+  var vtext = document.getElementById('vtext'), vscore = document.getElementById('vscore');
+  var refImg = document.getElementById('ref');
+  var btnCam = document.getElementById('btnCam'), btnRef = document.getElementById('btnRef'), btnStop = document.getElementById('btnStop');
+  var mFps = document.getElementById('mFps'), mMs = document.getElementById('mMs');
+  var mCam = document.getElementById('mCam'), mEng = document.getElementById('mEng');
+  var errBox = document.getElementById('err');
+
+  var W = 480, cv = null, stream = null, running = false;
+  var refDes = null, refKp = null, orb = null, matcher = null;
+  var times = [], lastState = 'blink';
+  var cap = document.createElement('canvas');
+  var cx = cap.getContext('2d', { willReadFrequently: true });
+
+  function fail(m) { errBox.hidden = false; errBox.textContent = m; }
+
+  var SOURCES = [
+    ['jsDelivr', 'https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.11.0-release.1/dist/opencv.js'],
+    ['OpenCV 공식', 'https://docs.opencv.org/4.10.0/opencv.js'],
+    ['unpkg', 'https://unpkg.com/@techstark/opencv-js@4.11.0-release.1/dist/opencv.js']
+  ];
+
+  function tryLoad(i) {
+    if (i >= SOURCES.length) {
+      mEng.innerHTML = '<span class="bad">못 불러옴</span>';
+      fail('겹침 판정 엔진을 불러오지 못했습니다. 카메라 열기는 그대로 시험하실 수 있습니다.');
+      return;
+    }
+    mEng.textContent = SOURCES[i][0] + ' 에서 받는 중…';
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = SOURCES[i][1];
+    s.onerror = function () { tryLoad(i + 1); };
+    s.onload = function () {
+      var mod = window.cv;
+      if (!mod) { tryLoad(i + 1); return; }
+      if (typeof mod.then === 'function') { mod.then(function (m) { ready(m, SOURCES[i][0]); }); return; }
+      if (mod.Mat) { ready(mod, SOURCES[i][0]); return; }
+      mod.onRuntimeInitialized = function () { ready(window.cv, SOURCES[i][0]); };
+    };
+    document.head.appendChild(s);
+  }
+
+  function ready(mod, where) {
+    cv = mod || window.cv;
+    try {
+      orb = new cv.ORB(1200);
+      matcher = new cv.BFMatcher(cv.NORM_HAMMING, false);
+      mEng.textContent = 'ORB 준비됨 · ' + where;
+    } catch (e) {
+      cv = null;
+      mEng.innerHTML = '<span class="bad">준비 실패</span>';
+      fail('판정 엔진 준비 실패: ' + e.message);
+    }
+  }
+  tryLoad(0);
+
+  btnCam.addEventListener('click', function () {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      fail('이 브라우저는 카메라를 지원하지 않습니다.'); return;
+    }
+    btnCam.disabled = true;
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false
+    }).then(function (s) { stream = s; v.srcObject = s; return v.play(); })
+      .then(function () {
+        empty.hidden = true; verdict.hidden = false;
+        btnRef.disabled = false; btnStop.disabled = false;
+        btnCam.textContent = '카메라 켜짐';
+        mCam.textContent = v.videoWidth + ' × ' + v.videoHeight;
+      })
+      .catch(function (e) {
+        btnCam.disabled = false;
+        fail('카메라를 열지 못했습니다 (' + e.name + '). 권한을 허용했는지 확인해 주세요.');
+      });
+  });
+
+  function grab() {
+    var h = Math.round(v.videoHeight * W / v.videoWidth);
+    cap.width = W; cap.height = h;
+    cx.drawImage(v, 0, 0, W, h);
+    return cv.imread(cap);
+  }
+  function gray(src) { var g = new cv.Mat(); cv.cvtColor(src, g, cv.COLOR_RGBA2GRAY); return g; }
+
+  btnRef.addEventListener('click', function () {
+    if (!cv) { fail('판정 엔진이 없어 기준 장면을 잡을 수 없습니다.'); return; }
+    var src = grab(), g = gray(src);
+    if (refDes) { refDes.delete(); refKp.delete(); }
+    refKp = new cv.KeyPointVector(); refDes = new cv.Mat();
+    orb.detect(g, refKp); orb.compute(g, refKp, refDes);
+    refImg.src = cap.toDataURL('image/jpeg', 0.6);
+    src.delete(); g.delete();
+    if (!running) { running = true; times = []; requestAnimationFrame(loop); }
+  });
+
+  btnStop.addEventListener('click', function () {
+    running = false;
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    edge.className = 'edge'; vtext.textContent = '멈췄습니다';
+    btnStop.disabled = true; btnRef.disabled = true;
+  });
+
+  function score() {
+    var src = grab(), g = gray(src);
+    var kp = new cv.KeyPointVector(), des = new cv.Mat(), n = 0;
+    try {
+      orb.detect(g, kp); orb.compute(g, kp, des);
+      if (des.rows >= 8 && refDes.rows >= 8) {
+        var mm = new cv.DMatchVectorVector();
+        matcher.knnMatch(refDes, des, mm, 2);
+        var a = [], b = [];
+        for (var i = 0; i < mm.size(); i++) {
+          var p = mm.get(i);
+          if (p.size() < 2) continue;
+          var m0 = p.get(0), m1 = p.get(1);
+          if (m0.distance < 0.8 * m1.distance) {
+            var k1 = refKp.get(m0.queryIdx).pt, k2 = kp.get(m0.trainIdx).pt;
+            a.push(k1.x, k1.y); b.push(k2.x, k2.y);
+          }
+        }
+        mm.delete();
+        if (a.length >= 16) {
+          var A = cv.matFromArray(a.length / 2, 1, cv.CV_32FC2, a);
+          var B = cv.matFromArray(b.length / 2, 1, cv.CV_32FC2, b);
+          var mask = new cv.Mat();
+          var H = cv.findHomography(A, B, cv.RANSAC, 5.0, mask);
+          if (!H.empty()) { for (var j = 0; j < mask.rows; j++) if (mask.data[j]) n++; }
+          A.delete(); B.delete(); mask.delete(); H.delete();
+        }
+      }
+    } catch (e) { /* 한 프레임 실패는 넘어간다 */ }
+    src.delete(); g.delete(); kp.delete(); des.delete();
+    return n;
+  }
+
+  function loop() {
+    if (!running) return;
+    if (v.readyState >= 2 && cv && refDes) {
+      var t0 = performance.now();
+      var n = score();
+      var dt = performance.now() - t0;
+      times.push(dt); if (times.length > 20) times.shift();
+      var avg = times.reduce(function (s, x) { return s + x; }, 0) / times.length;
+      mMs.textContent = avg.toFixed(0) + ' ms';
+      mFps.textContent = '초당 ' + (1000 / avg).toFixed(1) + '회';
+
+      var state = lastState;
+      if (n <= 27) state = 'blink'; else if (n >= 40) state = 'ok';
+      lastState = state;
+      vscore.textContent = n;
+      if (state === 'ok') { edge.className = 'edge ok'; vtext.textContent = '겹칩니다 · 찍어도 됩니다'; }
+      else { edge.className = 'edge blink'; vtext.textContent = '끊겼습니다 · 되돌리세요'; }
+    }
+    requestAnimationFrame(loop);
+  }
+})();
+</script>
+</body>
+</html>
