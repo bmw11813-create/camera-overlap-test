@@ -49,7 +49,7 @@
     background:rgba(255,255,255,.22);overflow:hidden}
   .bar i{display:block;height:100%;width:0;background:var(--go);transition:width .12s linear}
   .bar.low i{background:var(--stop)}
-  .half{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.75)}
+  .half{position:absolute;left:10%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.75)}
 
   .verdict{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(18,19,17,.85);
     border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:12px}
@@ -90,7 +90,7 @@
 
   <div>
     <h1>촬영 겹침 시험기</h1>
-    <p class="sub">제자리에서 <strong>오른쪽으로만</strong> 돌면서 찍으세요. 직전에 찍은 화면이 <strong>반 이상 남아 있어야</strong> 찍힙니다. 반 밑으로 내려가면 테두리가 깜빡이고 촬영이 잠깁니다. 사진은 저장되지도 전송되지도 않습니다.</p>
+    <p class="sub">제자리에서 <strong>오른쪽으로만</strong> 돌면서 찍으세요. 직전에 찍은 화면이 <strong>화면에서 완전히 사라지지 않게</strong> 이어서 찍으세요. 다 사라지면 테두리가 깜빡이고 촬영이 잠깁니다. 사진은 저장되지도 전송되지도 않습니다.</p>
   </div>
 
   <div class="stage" id="stage">
@@ -118,11 +118,11 @@
   <div class="card">
     <h2>규칙</h2>
     <dl>
-      <dt>찍을 수 있음</dt><dd class="num">55% 이상 남음</dd>
-      <dt>깜빡임 · 잠김</dt><dd class="num">45% 미만</dd>
-      <dt>사이 구간</dt><dd class="num">45 – 55% 유지</dd>
+      <dt>찍을 수 있음</dt><dd class="num">12% 이상 남음</dd>
+      <dt>깜빡임 · 잠김</dt><dd class="num">8% 미만</dd>
+      <dt>사이 구간</dt><dd class="num">8 – 12% 유지</dd>
     </dl>
-    <p class="note" style="margin:10px 0 0">직전에 찍은 화면 중 <strong>몇 %가 아직 보이는지</strong>를 넓이로 계산합니다. 막대 가운데 흰 선이 <strong>반</strong>입니다. 사이 구간을 둔 건 경계에서 깜빡임이 떨리지 않게 하기 위해서입니다.</p>
+    <p class="note" style="margin:10px 0 0">직전에 찍은 화면 중 <strong>몇 %가 아직 보이는지</strong>를 넓이로 계산합니다. 흰 눈금이 <strong>잠기는 선</strong>입니다. 이어지기만 하면 찍히고, 다 사라지면 잠깁니다. 0%가 아니라 10% 언저리에 둔 이유는, 완전히 0이 되면 얼마나 벗어났는지조차 계산할 수 없어 되돌릴 안내를 못 하기 때문입니다.</p>
   </div>
 
   <div class="card">
@@ -168,7 +168,7 @@
   var cap = document.createElement('canvas');
   var cx = cap.getContext('2d', { willReadFrequently: true });
 
-  var LOW = 45, HIGH = 55, MIN_INLIERS = 12;
+  var LOW = 8, HIGH = 12, MIN_INLIERS = 10;
 
   function fail(m) { errBox.hidden = false; errBox.textContent = m; }
 
@@ -388,11 +388,11 @@
       if (state === 'ok') {
         bar.className = 'bar';
         edge.className = 'edge ok';
-        vtext.textContent = '반 이상 남음 · 찍으세요';
+        vtext.textContent = '이어집니다 · 찍으세요';
       } else {
         bar.className = 'bar low';
         edge.className = 'edge blink';
-        vtext.textContent = '반 밑으로 내려감 · 왼쪽으로 조금';
+        vtext.textContent = '끊겼습니다 · 왼쪽으로 조금';
       }
     }
     requestAnimationFrame(loop);
