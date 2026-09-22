@@ -43,18 +43,28 @@
   @keyframes bl{0%,100%{opacity:1}50%{opacity:.12}}
   @media (prefers-reduced-motion:reduce){.edge.blink{animation:none}}
 
+  .count{position:absolute;left:12px;top:12px;background:rgba(18,19,17,.85);
+    border-radius:999px;padding:6px 12px;font-size:13px;font-weight:500}
+  .bar{position:absolute;left:12px;right:12px;bottom:86px;height:8px;border-radius:999px;
+    background:rgba(255,255,255,.22);overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--go);transition:width .12s linear}
+  .bar.low i{background:var(--stop)}
+  .half{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,.75)}
+
   .verdict{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(18,19,17,.85);
     border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:12px}
   .verdict .big{font-size:15px;font-weight:700}
-  .verdict .score{margin-left:auto;font-size:22px;font-weight:600}
+  .verdict .score{margin-left:auto;font-size:26px;font-weight:600}
+  .verdict .score small{font-size:14px;font-weight:400;color:var(--ink-2)}
   .thumb{width:60px;height:60px;border-radius:8px;object-fit:cover;
     border:1px solid var(--line);background:var(--panel-2);flex-shrink:0}
 
   .row{display:flex;gap:10px;flex-wrap:wrap}
   button{font:inherit;font-size:14px;font-weight:500;padding:12px 18px;min-height:46px;
     border-radius:8px;cursor:pointer;background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
-  button.primary{background:var(--go);border-color:var(--go);color:#0B2019;font-weight:700}
-  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:var(--go);border-color:var(--go);color:#0B2019;font-weight:700;flex-grow:1}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary:disabled{background:var(--panel-2);border-color:var(--line);color:var(--ink-3)}
   button:focus-visible{outline:2px solid var(--go);outline-offset:2px}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
@@ -66,6 +76,10 @@
   .bad{color:var(--stop)}
   .band{background:var(--stop-soft);border:1px solid #5A3820;border-radius:10px;
     padding:11px 13px;font-size:13px;line-height:1.55;color:#F3C9AC}
+  .shots{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .shots div{display:flex;justify-content:space-between;font-size:13px;
+    border-top:1px solid var(--line);padding-top:6px}
+  .shots span:first-child{color:var(--ink-2)}
 </style>
 </head>
 <body>
@@ -76,7 +90,7 @@
 
   <div>
     <h1>촬영 겹침 시험기</h1>
-    <p class="sub">이 폰에서 카메라가 열리는지, 그리고 <strong>겹침 판정이 1초에 몇 번</strong> 도는지 재는 도구입니다. 사진은 <strong>저장되지도 전송되지도 않습니다</strong> — 이 화면 안에서 계산하고 버립니다.</p>
+    <p class="sub">제자리에서 <strong>오른쪽으로만</strong> 돌면서 찍으세요. 직전에 찍은 화면이 <strong>반 이상 남아 있어야</strong> 찍힙니다. 반 밑으로 내려가면 테두리가 깜빡이고 촬영이 잠깁니다. 사진은 저장되지도 전송되지도 않습니다.</p>
   </div>
 
   <div class="stage" id="stage">
@@ -86,17 +100,29 @@
       <span>아래 “카메라 켜기”를 누르세요</span>
     </div>
     <div class="edge" id="edge"></div>
+    <div class="count" id="count" hidden>찍은 장수 <span class="num" id="nshots">0</span></div>
+    <div class="bar" id="bar" hidden><i id="barFill"></i><span class="half"></span></div>
     <div class="verdict" id="verdict" hidden>
-      <img class="thumb" id="ref" alt="기준으로 잡은 장면">
-      <span class="big" id="vtext">기준 장면을 잡으세요</span>
+      <img class="thumb" id="ref" alt="직전에 찍은 장면">
+      <span class="big" id="vtext">첫 장을 찍으세요</span>
       <span class="score num" id="vscore">—</span>
     </div>
   </div>
 
   <div class="row">
-    <button class="primary" id="btnCam">카메라 켜기</button>
-    <button id="btnRef" disabled>기준 장면 잡기</button>
+    <button id="btnCam">카메라 켜기</button>
+    <button class="primary" id="btnShot" disabled>촬영</button>
     <button id="btnStop" disabled>멈춤</button>
+  </div>
+
+  <div class="card">
+    <h2>규칙</h2>
+    <dl>
+      <dt>찍을 수 있음</dt><dd class="num">55% 이상 남음</dd>
+      <dt>깜빡임 · 잠김</dt><dd class="num">45% 미만</dd>
+      <dt>사이 구간</dt><dd class="num">45 – 55% 유지</dd>
+    </dl>
+    <p class="note" style="margin:10px 0 0">직전에 찍은 화면 중 <strong>몇 %가 아직 보이는지</strong>를 넓이로 계산합니다. 막대 가운데 흰 선이 <strong>반</strong>입니다. 사이 구간을 둔 건 경계에서 깜빡임이 떨리지 않게 하기 위해서입니다.</p>
   </div>
 
   <div class="card">
@@ -104,20 +130,16 @@
     <dl>
       <dt>판정 속도</dt><dd class="num" id="mFps">—</dd>
       <dt>한 번 판정</dt><dd class="num" id="mMs">—</dd>
-      <dt>비교 해상도</dt><dd class="num">480 px</dd>
+      <dt>맞은 특징점</dt><dd class="num" id="mInl">—</dd>
       <dt>카메라 해상도</dt><dd class="num" id="mCam">—</dd>
       <dt>판정 엔진</dt><dd id="mEng">불러오는 중…</dd>
     </dl>
   </div>
 
-  <div class="card">
-    <h2>기준값</h2>
-    <dl>
-      <dt>깜빡임</dt><dd class="num">27 이하</dd>
-      <dt>촬영 가능</dt><dd class="num">40 이상</dd>
-      <dt>사이 구간</dt><dd class="num">28 – 39 유지</dd>
-    </dl>
-    <p class="note" style="margin:10px 0 0">사진 32장, 전 496쌍을 비교해 얻은 값입니다. 상관없는 사진끼리도 27까지 나왔습니다.</p>
+  <div class="card" id="logCard" hidden>
+    <h2>찍을 때 남아 있던 비율</h2>
+    <p class="note" style="margin:0">각 장을 찍는 순간, 직전 장이 몇 % 남아 있었는지입니다.</p>
+    <div class="shots" id="shots"></div>
   </div>
 
   <div class="band" id="err" hidden></div>
@@ -131,22 +153,27 @@
   var empty = document.getElementById('empty'), verdict = document.getElementById('verdict');
   var vtext = document.getElementById('vtext'), vscore = document.getElementById('vscore');
   var refImg = document.getElementById('ref');
-  var btnCam = document.getElementById('btnCam'), btnRef = document.getElementById('btnRef'), btnStop = document.getElementById('btnStop');
+  var countBox = document.getElementById('count'), nshots = document.getElementById('nshots');
+  var bar = document.getElementById('bar'), barFill = document.getElementById('barFill');
+  var btnCam = document.getElementById('btnCam'), btnShot = document.getElementById('btnShot'), btnStop = document.getElementById('btnStop');
   var mFps = document.getElementById('mFps'), mMs = document.getElementById('mMs');
+  var mInl = document.getElementById('mInl');
   var mCam = document.getElementById('mCam'), mEng = document.getElementById('mEng');
   var errBox = document.getElementById('err');
+  var logCard = document.getElementById('logCard'), shotsBox = document.getElementById('shots');
 
-  var W = 480, cv = null, stream = null, running = false;
+  var W = 480, H0 = 0, cv = null, stream = null, running = false;
   var refDes = null, refKp = null, orb = null, matcher = null;
-  var times = [], lastState = 'blink';
+  var times = [], lastState = 'blink', shots = 0, curPct = 0, ready2shoot = false;
   var cap = document.createElement('canvas');
   var cx = cap.getContext('2d', { willReadFrequently: true });
+
+  var LOW = 45, HIGH = 55, MIN_INLIERS = 12;
 
   function fail(m) { errBox.hidden = false; errBox.textContent = m; }
 
   var SOURCES = [
     ['jsDelivr', 'https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.11.0-release.1/dist/opencv.js'],
-    ['OpenCV 공식', 'https://docs.opencv.org/4.10.0/opencv.js'],
     ['unpkg', 'https://unpkg.com/@techstark/opencv-js@4.11.0-release.1/dist/opencv.js']
   ];
 
@@ -194,8 +221,8 @@
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false
     }).then(function (s) { stream = s; v.srcObject = s; return v.play(); })
       .then(function () {
-        empty.hidden = true; verdict.hidden = false;
-        btnRef.disabled = false; btnStop.disabled = false;
+        empty.hidden = true; verdict.hidden = false; countBox.hidden = false; bar.hidden = false;
+        btnShot.disabled = false; btnStop.disabled = false;
         btnCam.textContent = '카메라 켜짐';
         mCam.textContent = v.videoWidth + ' × ' + v.videoHeight;
       })
@@ -206,34 +233,57 @@
   });
 
   function grab() {
-    var h = Math.round(v.videoHeight * W / v.videoWidth);
-    cap.width = W; cap.height = h;
-    cx.drawImage(v, 0, 0, W, h);
+    H0 = Math.round(v.videoHeight * W / v.videoWidth);
+    cap.width = W; cap.height = H0;
+    cx.drawImage(v, 0, 0, W, H0);
     return cv.imread(cap);
   }
   function gray(src) { var g = new cv.Mat(); cv.cvtColor(src, g, cv.COLOR_RGBA2GRAY); return g; }
 
-  btnRef.addEventListener('click', function () {
-    if (!cv) { fail('판정 엔진이 없어 기준 장면을 잡을 수 없습니다.'); return; }
-    var src = grab(), g = gray(src);
-    if (refDes) { refDes.delete(); refKp.delete(); }
-    refKp = new cv.KeyPointVector(); refDes = new cv.Mat();
-    orb.detect(g, refKp); orb.compute(g, refKp, refDes);
-    refImg.src = cap.toDataURL('image/jpeg', 0.6);
-    src.delete(); g.delete();
-    if (!running) { running = true; times = []; requestAnimationFrame(loop); }
-  });
+  // ---- 넓이 계산 --------------------------------------------------------
+  function area(p) {                       // 신발끈 공식
+    var s = 0;
+    for (var i = 0, n = p.length; i < n; i++) {
+      var a = p[i], b = p[(i + 1) % n];
+      s += a[0] * b[1] - b[0] * a[1];
+    }
+    return Math.abs(s) / 2;
+  }
+  function clipHalf(poly, inside, cut) {   // Sutherland–Hodgman 한 변
+    var out = [];
+    for (var i = 0, n = poly.length; i < n; i++) {
+      var cur = poly[i], prv = poly[(i + n - 1) % n];
+      var ci = inside(cur), pi = inside(prv);
+      if (ci) { if (!pi) out.push(cut(prv, cur)); out.push(cur); }
+      else if (pi) { out.push(cut(prv, cur)); }
+    }
+    return out;
+  }
+  function clipRect(poly, w, h) {
+    function lerp(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+    poly = clipHalf(poly, function (p) { return p[0] >= 0; }, function (a, b) { return lerp(a, b, (0 - a[0]) / (b[0] - a[0])); });
+    if (!poly.length) return poly;
+    poly = clipHalf(poly, function (p) { return p[0] <= w; }, function (a, b) { return lerp(a, b, (w - a[0]) / (b[0] - a[0])); });
+    if (!poly.length) return poly;
+    poly = clipHalf(poly, function (p) { return p[1] >= 0; }, function (a, b) { return lerp(a, b, (0 - a[1]) / (b[1] - a[1])); });
+    if (!poly.length) return poly;
+    return clipHalf(poly, function (p) { return p[1] <= h; }, function (a, b) { return lerp(a, b, (h - a[1]) / (b[1] - a[1])); });
+  }
+  function project(Hm, pts) {
+    var d = Hm.data64F, out = [];
+    for (var i = 0; i < pts.length; i++) {
+      var x = pts[i][0], y = pts[i][1];
+      var w = d[6] * x + d[7] * y + d[8];
+      if (!isFinite(w) || Math.abs(w) < 1e-9) return null;
+      out.push([(d[0] * x + d[1] * y + d[2]) / w, (d[3] * x + d[4] * y + d[5]) / w]);
+    }
+    return out;
+  }
 
-  btnStop.addEventListener('click', function () {
-    running = false;
-    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
-    edge.className = 'edge'; vtext.textContent = '멈췄습니다';
-    btnStop.disabled = true; btnRef.disabled = true;
-  });
-
-  function score() {
+  function measure() {
     var src = grab(), g = gray(src);
-    var kp = new cv.KeyPointVector(), des = new cv.Mat(), n = 0;
+    var kp = new cv.KeyPointVector(), des = new cv.Mat();
+    var inl = 0, pct = 0;
     try {
       orb.detect(g, kp); orb.compute(g, kp, des);
       if (des.rows >= 8 && refDes.rows >= 8) {
@@ -254,33 +304,96 @@
           var A = cv.matFromArray(a.length / 2, 1, cv.CV_32FC2, a);
           var B = cv.matFromArray(b.length / 2, 1, cv.CV_32FC2, b);
           var mask = new cv.Mat();
-          var H = cv.findHomography(A, B, cv.RANSAC, 5.0, mask);
-          if (!H.empty()) { for (var j = 0; j < mask.rows; j++) if (mask.data[j]) n++; }
-          A.delete(); B.delete(); mask.delete(); H.delete();
+          var Hm = cv.findHomography(A, B, cv.RANSAC, 5.0, mask);
+          if (!Hm.empty()) {
+            for (var j = 0; j < mask.rows; j++) if (mask.data[j]) inl++;
+            if (inl >= MIN_INLIERS) {
+              var quad = project(Hm, [[0, 0], [W, 0], [W, H0], [0, H0]]);
+              if (quad) {
+                var full = area(quad);
+                if (full > 1) {
+                  var vis = clipRect(quad, W, H0);
+                  pct = vis.length ? Math.max(0, Math.min(100, area(vis) / full * 100)) : 0;
+                }
+              }
+            }
+          }
+          A.delete(); B.delete(); mask.delete(); Hm.delete();
         }
       }
     } catch (e) { /* 한 프레임 실패는 넘어간다 */ }
     src.delete(); g.delete(); kp.delete(); des.delete();
-    return n;
+    return { inl: inl, pct: pct };
   }
+
+  function logShot(n, pct) {
+    logCard.hidden = false;
+    var d = document.createElement('div');
+    var a = document.createElement('span'); a.textContent = n + '장째';
+    var b = document.createElement('span'); b.className = 'num';
+    b.textContent = pct === null ? '첫 장' : Math.round(pct) + '% 남음';
+    d.appendChild(a); d.appendChild(b);
+    shotsBox.insertBefore(d, shotsBox.firstChild);
+    while (shotsBox.children.length > 8) shotsBox.removeChild(shotsBox.lastChild);
+  }
+
+  btnShot.addEventListener('click', function () {
+    if (!cv) { fail('판정 엔진이 없어 촬영할 수 없습니다.'); return; }
+    if (shots > 0 && !ready2shoot) return;
+    var was = shots === 0 ? null : curPct;
+
+    var src = grab(), g = gray(src);
+    if (refDes) { refDes.delete(); refKp.delete(); }
+    refKp = new cv.KeyPointVector(); refDes = new cv.Mat();
+    orb.detect(g, refKp); orb.compute(g, refKp, refDes);
+    refImg.src = cap.toDataURL('image/jpeg', 0.6);
+    src.delete(); g.delete();
+
+    shots += 1; nshots.textContent = shots;
+    logShot(shots, was);
+    lastState = 'ok'; ready2shoot = true; curPct = 100;
+    if (!running) { running = true; times = []; requestAnimationFrame(loop); }
+  });
+
+  btnStop.addEventListener('click', function () {
+    running = false;
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    edge.className = 'edge'; vtext.textContent = '멈췄습니다';
+    btnStop.disabled = true; btnShot.disabled = true;
+  });
 
   function loop() {
     if (!running) return;
     if (v.readyState >= 2 && cv && refDes) {
       var t0 = performance.now();
-      var n = score();
+      var r = measure();
       var dt = performance.now() - t0;
+      curPct = r.pct;
+
       times.push(dt); if (times.length > 20) times.shift();
       var avg = times.reduce(function (s, x) { return s + x; }, 0) / times.length;
       mMs.textContent = avg.toFixed(0) + ' ms';
       mFps.textContent = '초당 ' + (1000 / avg).toFixed(1) + '회';
+      mInl.textContent = r.inl;
 
       var state = lastState;
-      if (n <= 27) state = 'blink'; else if (n >= 40) state = 'ok';
+      if (r.pct < LOW) state = 'blink'; else if (r.pct >= HIGH) state = 'ok';
       lastState = state;
-      vscore.textContent = n;
-      if (state === 'ok') { edge.className = 'edge ok'; vtext.textContent = '겹칩니다 · 찍어도 됩니다'; }
-      else { edge.className = 'edge blink'; vtext.textContent = '끊겼습니다 · 되돌리세요'; }
+      ready2shoot = (state === 'ok');
+      btnShot.disabled = !ready2shoot;
+
+      var shown = Math.round(r.pct);
+      vscore.innerHTML = shown + '<small>%</small>';
+      barFill.style.width = shown + '%';
+      if (state === 'ok') {
+        bar.className = 'bar';
+        edge.className = 'edge ok';
+        vtext.textContent = '반 이상 남음 · 찍으세요';
+      } else {
+        bar.className = 'bar low';
+        edge.className = 'edge blink';
+        vtext.textContent = '반 밑으로 내려감 · 왼쪽으로 조금';
+      }
     }
     requestAnimationFrame(loop);
   }
