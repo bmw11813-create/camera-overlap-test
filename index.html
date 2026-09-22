@@ -122,7 +122,7 @@
       <dt>깜빡임 · 잠김</dt><dd class="num">0.7% 미만</dd>
       <dt>사이 구간</dt><dd class="num">0.7 – 1.3% 유지</dd>
     </dl>
-    <p class="note" style="margin:10px 0 0">직전에 찍은 화면 중 <strong>몇 %가 아직 보이는지</strong>를 넓이로 계산합니다. <strong>끝자락 1%만 남아도 찍힙니다.</strong> 완전히 사라질 때만 잠깁니다. 다만 1% 근처에서는 맞춰볼 특징점이 거의 없어 <strong>계산이 실패해 0으로 떨어질 수 있습니다</strong> — 기준값이 아니라 방식의 한계입니다. 아래 <strong>맞은 특징점</strong> 수가 한 자리로 떨어지면 그 구간입니다.</p>
+    <p class="note" style="margin:10px 0 0">직전에 찍은 화면 중 <strong>몇 %가 아직 보이는지</strong>를 넓이로 계산합니다. <strong>끝자락 1%만 남아도 찍힙니다.</strong> 완전히 사라질 때만 잠깁니다. 다만 1% 근처에서는 맞춰볼 특징점이 거의 없어 <strong>계산이 실패해 0으로 떨어질 수 있습니다</strong> — 기준값이 아니라 방식의 한계입니다. 못 쟀을 때는 <strong>잠그지 않고 “재는 중”</strong>으로 둡니다 — 돌리는 동안 흔들려서 못 재는 것뿐이기 때문입니다. 1.2초 넘게 계속 못 재야 끊긴 것으로 봅니다.</p>
   </div>
 
   <div class="card">
@@ -168,7 +168,7 @@
   var cap = document.createElement('canvas');
   var cx = cap.getContext('2d', { willReadFrequently: true });
 
-  var LOW = 0.7, HIGH = 1.3, MIN_INLIERS = 6;
+  var LOW = 0.7, HIGH = 1.3, MIN_INLIERS = 6, LOST_MS = 1200, lostAt = 0;
 
   function fail(m) { errBox.hidden = false; errBox.textContent = m; }
 
@@ -201,7 +201,7 @@
   function ready(mod, where) {
     cv = mod || window.cv;
     try {
-      orb = new cv.ORB(1200);
+      orb = new cv.ORB(2000);
       matcher = new cv.BFMatcher(cv.NORM_HAMMING, false);
       mEng.textContent = 'ORB 준비됨 · ' + where;
     } catch (e) {
@@ -283,7 +283,7 @@
   function measure() {
     var src = grab(), g = gray(src);
     var kp = new cv.KeyPointVector(), des = new cv.Mat();
-    var inl = 0, pct = 0;
+    var inl = 0, pct = 0, ok = false;
     try {
       orb.detect(g, kp); orb.compute(g, kp, des);
       if (des.rows >= 8 && refDes.rows >= 8) {
@@ -294,7 +294,7 @@
           var p = mm.get(i);
           if (p.size() < 2) continue;
           var m0 = p.get(0), m1 = p.get(1);
-          if (m0.distance < 0.8 * m1.distance) {
+          if (m0.distance < 0.85 * m1.distance) {
             var k1 = refKp.get(m0.queryIdx).pt, k2 = kp.get(m0.trainIdx).pt;
             a.push(k1.x, k1.y); b.push(k2.x, k2.y);
           }
@@ -314,6 +314,7 @@
                 if (full > 1) {
                   var vis = clipRect(quad, W, H0);
                   pct = vis.length ? Math.max(0, Math.min(100, area(vis) / full * 100)) : 0;
+                  ok = true;
                 }
               }
             }
@@ -323,7 +324,7 @@
       }
     } catch (e) { /* 한 프레임 실패는 넘어간다 */ }
     src.delete(); g.delete(); kp.delete(); des.delete();
-    return { inl: inl, pct: pct };
+    return { inl: inl, pct: pct, ok: ok };
   }
 
   function logShot(n, pct) {
@@ -376,16 +377,33 @@
       mFps.textContent = '초당 ' + (1000 / avg).toFixed(1) + '회';
       mInl.textContent = r.inl;
 
-      var state = lastState;
-      if (r.pct < LOW) state = 'blink'; else if (r.pct >= HIGH) state = 'ok';
+      var now = performance.now();
+      var state = lastState, measuring = false;
+      if (r.ok) {
+        lostAt = 0;
+        if (r.pct < LOW) state = 'blink'; else if (r.pct >= HIGH) state = 'ok';
+      } else {
+        if (!lostAt) lostAt = now;
+        if (now - lostAt > LOST_MS) state = 'blink';   // 계속 못 재면 끊긴 것으로 본다
+        else measuring = true;                          // 잠깐 못 잰 것은 잠그지 않는다
+      }
       lastState = state;
       ready2shoot = (state === 'ok');
       btnShot.disabled = !ready2shoot;
 
-      var shown = r.pct >= 10 ? Math.round(r.pct) : Math.round(r.pct * 10) / 10;
-      vscore.innerHTML = shown + '<small>%</small>';
-      barFill.style.width = Math.max(0, Math.min(100, r.pct)) + '%';
-      if (state === 'ok') {
+      if (r.ok) {
+        var shown = r.pct >= 10 ? Math.round(r.pct) : Math.round(r.pct * 10) / 10;
+        vscore.innerHTML = shown + '<small>%</small>';
+        barFill.style.width = Math.max(0, Math.min(100, r.pct)) + '%';
+      } else {
+        vscore.innerHTML = '<small>못 잼</small>';
+      }
+
+      if (measuring) {
+        bar.className = 'bar';
+        edge.className = 'edge ' + (lastState === 'ok' ? 'ok' : 'blink');
+        vtext.textContent = '재는 중 · 잠깐 멈춰 보세요';
+      } else if (state === 'ok') {
         bar.className = 'bar';
         edge.className = 'edge ok';
         vtext.textContent = '이어집니다 · 찍으세요';
